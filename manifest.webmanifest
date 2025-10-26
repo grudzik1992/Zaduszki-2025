@@ -1,7 +1,7 @@
 {
   "name": "Śpiewnik Zaduszki 2025",
   "short_name": "Śpiewnik",
-  "start_url": "Ostateczna wersja.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#fdfdfd",
   "theme_color": "#2563eb",
