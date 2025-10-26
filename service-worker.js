@@ -1,6 +1,6 @@
-const CACHE_NAME = "spiewnik-cache-v1";
+const CACHE_NAME = "spiewnik-cache-v2";
 const ASSETS = [
-  "./Ostateczna wersja.html",
+  "./index.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
