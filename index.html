@@ -1,0 +1,3437 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Śpiewnik z Akordami</title>
+<style>
+/* ===== Unified & Cleaned Styles ===== */
+:root{
+  --bg:#fdfdfd;
+  --fg:#1a1a1a;
+  --muted:#d0d5dd;
+  --card:#ffffff;
+  --border:#e5e7eb;
+  --accent:#2563eb;
+  --link:#1d4ed8;
+  --button-bg:#f3f4f6;
+  --button-fg:#111;
+}
+body.theme-dark{
+  --bg:#181a1f;
+  --fg:#e3e6eb;
+  --muted:#a4a9b3;
+  --card:#23262d;
+  --border:#4a4f58;
+  --accent:#4e8cff;
+  --link:#8cbaff;
+  --button-bg:#2d3138;
+  --button-fg:#e3e6eb;
+}
+
+/* Base */
+html,body{height:100%; margin:0; padding:0;}
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+h1,h2,h3{color:var(--fg);transition:color .3s}
+p{margin:0.4em 0;}
+a{color:var(--link);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* Toolbar */
+.toolbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;justify-content:flex-end;gap:10px;
+  padding:10px 16px;
+  background:var(--card);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 2px 12px rgba(0,0,0,.15);
+  transition:background .3s,border-color .3s;
+}
+.toolbar button{
+  border:none;
+  background:var(--button-bg);
+  color:var(--button-fg);
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:500;
+  transition:background .25s,color .25s,transform .15s;
+}
+.toolbar button:hover{background:var(--accent);color:#fff;transform:translateY(-1px);}
+
+/* Container */
+.songbook-container{
+  max-width:900px;margin:0 auto;padding:20px;
+  background:var(--bg);
+  transition:background .3s;
+}
+
+/* Headings / TOC */
+h1{text-align:center;font-size:36px;margin:16px 0 4px;}
+h2{text-align:left;font-size:22px;margin-bottom:6px;}
+#tocList{line-height:1.8;font-size:17px;margin:0;padding-left:24px;}
+#tocList li{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor:grab;
+  padding:4px 0 4px 6px;
+  border-left:2px solid transparent;
+}
+#tocList li a { flex-grow: 1; }
+#tocList li.dragging{opacity:.6;border-left-color:var(--accent);}
+#tocList a{color:var(--link);}
+#tocList a:hover{color:var(--accent);}
+.delete-song-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 8px;
+  border-radius: 50%;
+  margin-left: 10px;
+}
+.delete-song-btn:hover { background: #f8d7da; color: #721c24; }
+body.theme-dark .delete-song-btn:hover { background: #583034; color: #f8d7da; }
+
+/* Song block */
+.song{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 14px 8px;
+  margin:20px 0;
+  box-shadow:0 1px 6px rgba(0,0,0,.05);
+  transition:background .3s,border-color .3s;
+}
+.song .line{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  gap:14px;
+  align-items:baseline;
+  padding:2px 0;
+  min-height:1.4em;
+}
+.song .chords{
+  white-space:pre;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  color:var(--muted);
+  border-right:1px dashed var(--border);
+  padding-right:8px;
+}
+.song .lyrics{
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+/* Transpose controls */
+.transpose-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 12px 0;
+}
+.transpose-controls button {
+  border: 1px solid var(--border);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.transpose-controls .transpose-level { font-weight: 600; min-width: 2.5ch; text-align: center; }
+
+/* Mobile layout */
+@media(max-width:720px){
+  .song .line{grid-template-columns:1fr;gap:6px;}
+  .song .chords{order:2;border-right:none;opacity:.85;}
+  .song .lyrics{order:1;}
+}
+
+/* Back to top */
+#backToTop{
+  position:fixed;right:18px;bottom:22px;
+  display:none;align-items:center;gap:6px;
+  padding:10px 12px;
+  background:var(--accent);
+  color:white;
+  border:none;
+  border-radius:999px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  cursor:pointer;
+  transition:opacity .3s,background .3s;
+}
+#backToTop:hover{background:#5b93ff;}
+
+/* Print: one song per page */
+@page {
+  size: A4;
+  margin: 8mm 12mm; /* 8mm góra/dół, 12mm lewo/prawo */
+  /* Reset browser-injected headers and footers */
+  @top-left { content: ""; }
+  @top-center { content: ""; }
+  @top-right { content: ""; }
+  @bottom-left { content: ""; }
+  @bottom-center { content: ""; }
+  @bottom-right { content: ""; }
+}
+
+@media print {
+  html, body { background:#fff !important; color:#000 !important; }
+  .toolbar, #backToTop { display: none !important; }
+  .songbook-container { max-width: none !important; padding: 0 8mm !important; margin: 0 !important; }
+
+  /* 1. Każda piosenka i TOC na nowej, czystej stronie */
+  .toc, .song {
+    page-break-before: always;
+    page-break-after: always;
+    page-break-inside: avoid; /* Unikaj łamania piosenki w połowie */
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .toc, .song:first-of-type { page-break-before: auto; }
+  .song:last-of-type { page-break-after: auto; }
+
+  /* 2. Zachowaj układ kolumn jak na ekranie */
+  .song .line { display: grid !important; grid-template-columns: 240px 1fr !important; }
+  .song .chords { padding-right: 12px !important; }
+
+  /* 3. Dodatkowe wcięcie dla spisu treści */
+  .toc { padding-left: 2em !important; }
+
+  /* 4. Ukryj kontrolki transpozycji na wydruku */
+  .transpose-controls, .delete-song-btn { display: none !important; }
+
+  h1, h2 { color:#000 !important; page-break-after: avoid; }
+}
+
+/* Tablet responsiveness */
+@media (min-width: 720px) and (max-width: 1366px){
+  .songbook-container{ padding: 16px; max-width: 94%; }
+  .song .line{ grid-template-columns: 200px 1fr; }
+  h1{ font-size: 30px; }
+  h2{ font-size: 20px; }
+  .toolbar{ flex-wrap: wrap; justify-content: center; }
+}
+
+/* Force clear chord contrast on screen too */
+.song .chords{ font-weight:700; color:#111; }
+body.theme-dark .song .chords{ color:#fff !important; }
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('✅ Service Worker zarejestrowany!'))
+      .catch(err => console.log('❌ Błąd SW:', err));
+  }
+</script>
+
+
+
+
+
+</head>
+<body>
+    <div class="songbook-container">
+        <div class="toolbar">
+            <button id="themeToggle" title="Przełącz tryb nocny/dzienny">🌙 / ☀️</button>
+            <button id="exportHtmlBtn" title="Zapisz jako HTML">💾 Eksport do HTML</button>
+<button id="exportPdfBtn" title="Zapisz jako PDF">📄 Eksport do PDF</button>
+        </div>
+
+        <h1 style="text-align:center; font-size:36px; margin:0 0 10px;">Zaduszki 2025</h1>
+        <p style="text-align:center; color:var(--muted); margin:0 0 30px; font-style:italic;">Śpiewnik z akordami</p>
+
+        <!-- 📖 Spis treści (drag & drop) -->
+        <div class="toc" style="margin-bottom:40px; padding:20px; background:var(--bg); border:1px solid var(--border); border-radius:6px;">
+            <h2 style="margin-top:0; border-bottom:2px solid var(--border); padding-bottom:5px;">Spis treści</h2>
+            <ol id="tocList" style="line-height:1.8; font-size:17px; margin:0; padding-left:20px;">
+                <li draggable="true" data-target="dla-krzysia"><a href="#dla-krzysia">1. Dla Krzysia</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="kto-tak-adnie-kradnie"><a href="#kto-tak-adnie-kradnie">2. Kto tak ładnie kradnie</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="zyczenia-z-caego-serca"><a href="#zyczenia-z-caego-serca">3. Życzenia z całego serca</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="powrocmy-jak-za-dawnych-lat"><a href="#powrocmy-jak-za-dawnych-lat">4. Powróćmy jak za dawnych lat</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="wymysliem-ciebie"><a href="#wymysliem-ciebie">5. Wymyśliłem Ciebie</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="moja-miosc-najwieksza"><a href="#moja-miosc-najwieksza">6. Moja miłość największa</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="bez-ciebie-umieram"><a href="#bez-ciebie-umieram">7. Bez Ciebie umieram</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="anio"><a href="#anio">8. Anioł</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="kwiat-jednej-nocy"><a href="#kwiat-jednej-nocy">9. Kwiat jednej nocy</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="nigdy-wiecej"><a href="#nigdy-wiecej">10. Nigdy więcej</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="dopoki-jestes"><a href="#dopoki-jestes">11. Dopóki jesteś</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="zwariowany-czas"><a href="#zwariowany-czas">12. Zwariowany czas</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="teatr-uczy-nas"><a href="#teatr-uczy-nas">13. Teatr uczy nas</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="chce-wyjechac-na-wies"><a href="#chce-wyjechac-na-wies">14. Chcę wyjechać na wieś</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="gdy-kiedys-znow-zawoam-cie"><a href="#gdy-kiedys-znow-zawoam-cie">15. Gdy kiedyś znów zawołam Cię</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="by-cos-zostao-z-tamtych-lat"><a href="#by-cos-zostao-z-tamtych-lat">16. By coś zostało z tamtych lat</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="obok-nas"><a href="#obok-nas">17. Obok nas</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="jej-portret"><a href="#jej-portret">18. Jej portret</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="zakochani-sa-wsrod-nas"><a href="#zakochani-sa-wsrod-nas">19. Zakochani są wśród nas</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="mae-tesknoty"><a href="#mae-tesknoty">20. Małe tęsknoty</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="cud-niepamieci"><a href="#cud-niepamieci">21. Cud niepamięci</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="tolerancja"><a href="#tolerancja">22. Tolerancja</a><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+            </ol>
+            <p style="margin-top:10px; color:var(--muted); font-size:13px;">Przeciągaj pozycje, by zmienić kolejność utworów.</p>
+        </div>
+
+
+        <!-- Piosenka 1: Dla Krzysia -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="dla-krzysia">1. Dla Krzysia</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G D/F# e D</div>
+                <div class="lyrics" contenteditable="true">Ułożymy kołysankę jak się składa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G D/F# e A</div>
+                <div class="lyrics" contenteditable="true">Domy z klocków rozrzuconych na dywanie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D b D B7</div>
+                <div class="lyrics" contenteditable="true">Dudki będą nam historię opowiadać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e B7 e G</div>
+                <div class="lyrics" contenteditable="true">A gitara rzuci wielki cień na ścianę</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A {f# e A}</div>
+                <div class="lyrics" contenteditable="true">Senne misie mrużą oczka i ziewają</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D b D b</div>
+                <div class="lyrics" contenteditable="true">Śpią książeczki obrazkami na stoliku</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e B e G</div>
+                <div class="lyrics" contenteditable="true">Bajki bajkom kołysanki swe śpiewają</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A g {e f#} G</div>
+                <div class="lyrics" contenteditable="true">Chcesz posłuchać posłuchamy tak po cichu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# b</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat syneczku mały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D {e f# G}</div>
+                <div class="lyrics" contenteditable="true">Niebieskie morza i góry białe</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# B</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat ogromny cały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D</div>
+                <div class="lyrics" contenteditable="true">Syneczku mały już pora spać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# b</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat syneczku mały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D {e f# G}</div>
+                <div class="lyrics" contenteditable="true">Niebieskie morza i góry białe</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# B</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat ogromny cały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D</div>
+                <div class="lyrics" contenteditable="true">Syneczku mały już pora spać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bolek z Lolkiem też pobiegli by się zdrzemnąć</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dobranocka pod kołderką śpi puchową</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Lampy chrapią i dlatego jest tak ciemno</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Lecz się nie bój kołysanka będzie z tobą</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# b</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat syneczku mały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D {e f# G}</div>
+                <div class="lyrics" contenteditable="true">Niebieskie morza i góry białe</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# B</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat ogromny cały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D</div>
+                <div class="lyrics" contenteditable="true">Syneczku mały już pora spać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# b</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat syneczku mały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D {e f# G}</div>
+                <div class="lyrics" contenteditable="true">Niebieskie morza i góry białe</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A f# B</div>
+                <div class="lyrics" contenteditable="true">Tyś jest mój świat ogromny cały</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D</div>
+                <div class="lyrics" contenteditable="true">Syneczku mały już pora spać</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 2: Kto tak ładnie kradnie -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="kto-tak-adnie-kradnie">2. Kto tak ładnie kradnie</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b b/A E</div>
+                <div class="lyrics" contenteditable="true">Ja nie chcę znów za dużo mieć,za mało też.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G F# b b/A B7</div>
+                <div class="lyrics" contenteditable="true">w małżeństwie mi,wystarczysz ty,Parasol w deszcz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D G G#0 G F#</div>
+                <div class="lyrics" contenteditable="true">I modny strój i dobry butI jeszcze, żeby stał się cud.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Oddałabym sukienki teI pończoch sto,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">By z tobą hen, do nieba biecI znów na dno</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bo kiedy w nas przygaśnie blask,Ty dla mnie skradniesz jedną z gwiazd.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b F# b</div>
+                <div class="lyrics" contenteditable="true">On tak ładnie kradnie, co się da,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b F# b</div>
+                <div class="lyrics" contenteditable="true">Te brylanty, fanty, futra dwa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">(A) D e A (F#)</div>
+                <div class="lyrics" contenteditable="true">Gdy ktoś coś przeciwko niemu ma,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b F# b</div>
+                <div class="lyrics" contenteditable="true">To nie ja, to nie ja.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">On tak ładnie kradnie, że</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Miło przy nim i na dnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Moje serce także w końcu skradł,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">No i wpadł, no i wpadł .</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Co było nim przyszedłeś ty,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wspominać wstyd</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie miałam gdzie i dokąd iśćI o kim śnić</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Tak mijał mi za rokiem rokDopiero dzisiaj warto żyć.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Za dobrze nam ze sobą jest,Za dobrze nam</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Za mało chmur, za mało łezPrzy tobie mam</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Uliczny kurz, ma zapach róż,A w dali czeka siedem zórz.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">On tak ładnie kradnie, zorze z gór</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">On tak ładnie kradnie deszcze z chmur,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">całe bajki pełne strusich piór</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">czarny dwór biały mur</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">On tak ładnie kradnie, że</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Miło przy nim i na dnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdybym chciała to by cały świat,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">dla mnie skradł, dla mnie skradł.</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 3: Życzenia z całego serca -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="zyczenia-z-caego-serca">3. Życzenia z całego serca</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C B</div>
+                <div class="lyrics" contenteditable="true">Tak wiele było między nami już</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A jeszcze tyle ma się zdarzyć</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Jest jedna droga którą warto pójść</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Spojrzenia twoje drogowskazy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a D G C</div>
+                <div class="lyrics" contenteditable="true">Z całego serca życzę ci</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f#(7-5) B e</div>
+                <div class="lyrics" contenteditable="true">Spełnienia marzeń najskrytszych</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B e D G</div>
+                <div class="lyrics" contenteditable="true">Jest tyle piękna w słowie my</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# E</div>
+                <div class="lyrics" contenteditable="true">Tyle barw nagłych tęcz i słodyczy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a D G C</div>
+                <div class="lyrics" contenteditable="true">Z całego serca życzę ci</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f#(7-5) B</div>
+                <div class="lyrics" contenteditable="true">Uśmiechów słońca na twarzy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C D e</div>
+                <div class="lyrics" contenteditable="true">I jak najwięcej jasnych chwil</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C b</div>
+                <div class="lyrics" contenteditable="true">W rozmowach wszystkich naszych</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie pytaj dokąd nas prowadzi czas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie próbuj drogi naszej nazwać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Żyjemy chwilą która dla nas trwa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Tak zapisane było w gwiazdach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a D G C</div>
+                <div class="lyrics" contenteditable="true">Z całego serca życzę ci</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f#(7-5) B e</div>
+                <div class="lyrics" contenteditable="true">Spełnienia marzeń najskrytszych</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B e D G</div>
+                <div class="lyrics" contenteditable="true">Jest tyle piękna w słowie my</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# E</div>
+                <div class="lyrics" contenteditable="true">Tyle barw nagłych tęcz i słodyczy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a D G C</div>
+                <div class="lyrics" contenteditable="true">Z całego serca życzę ci</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f#(7-5) B</div>
+                <div class="lyrics" contenteditable="true">Uśmiechów słońca na twarzy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C D e</div>
+                <div class="lyrics" contenteditable="true">I jak najwięcej jasnych chwil</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C b /x2 A</div>
+                <div class="lyrics" contenteditable="true">W rozmowach wszystkich naszych</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 4: Powróćmy jak za dawnych lat -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="powrocmy-jak-za-dawnych-lat">4. Powróćmy jak za dawnych lat</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C e d A</div>
+                <div class="lyrics" contenteditable="true">Świat nasz wyglądał jaśniej</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G</div>
+                <div class="lyrics" contenteditable="true">Kiedyś za dawnych dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C e d A</div>
+                <div class="lyrics" contenteditable="true">Gdy się wierzyło w baśnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G</div>
+                <div class="lyrics" contenteditable="true">Gdy się wierzyło w sny</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C B e</div>
+                <div class="lyrics" contenteditable="true">Jakieś niezwykłe dreszcze</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G a E G</div>
+                <div class="lyrics" contenteditable="true">Bajki budziły w nas!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wróćmy w tę przeszłość</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Jeszcze raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C (A7) d G</div>
+                <div class="lyrics" contenteditable="true">Powróćmy jak za dawnych lat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C</div>
+                <div class="lyrics" contenteditable="true">W zaczarowany bajek świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C (A7) d G</div>
+                <div class="lyrics" contenteditable="true">Miłością swoją w piękną baśń</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C</div>
+                <div class="lyrics" contenteditable="true">Me życie zmień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Za siódmym morzem, z dala stąd</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Znajdziemy czarodziejski ląd</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I szczęście da nam każda noc</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I każdy dzień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b0 E7 a</div>
+                <div class="lyrics" contenteditable="true">I w bajce to nie będzie cud</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D G</div>
+                <div class="lyrics" contenteditable="true">Że książę los z kopciuszkiem splótł</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Że dla spełnienia tęsknot dwóch</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Specjalnie przybył dobry duch</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Powróćmy jak za dawnych lat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W zaczarowany bajek świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I w życiu może zdarzyć się</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Cudowna baśń</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b0 E7 a</div>
+                <div class="lyrics" contenteditable="true">I w bajce to nie będzie cud</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D G</div>
+                <div class="lyrics" contenteditable="true">Że książę los z kopciuszkiem splótł</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Że dla spełnienia tęsknot dwóch</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Specjalnie przybył dobry duch</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Powróćmy jak za dawnych lat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W zaczarowany bajek świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I w życiu może zdarzyć się</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Cudowna baśń</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 5: Wymyśliłem Ciebie -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="wymysliem-ciebie">5. Wymyśliłem Ciebie</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C B7</div>
+                <div class="lyrics" contenteditable="true">Dzisiaj nagle wymyśliłem Ciebie,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C B7</div>
+                <div class="lyrics" contenteditable="true">Twoje imię zadźwięczało we mnie.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a e</div>
+                <div class="lyrics" contenteditable="true">Choć tyle innych jest,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D C B</div>
+                <div class="lyrics" contenteditable="true">Znam tylko jego dźwięk.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e f#(7-5) B</div>
+                <div class="lyrics" contenteditable="true">Do mnie mów najłagodniej,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f#(7-5) B</div>
+                <div class="lyrics" contenteditable="true">Jak tylko Ty potrafisz.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G a</div>
+                <div class="lyrics" contenteditable="true">I podaj rękę spłoszoną,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e F#</div>
+                <div class="lyrics" contenteditable="true">Szczęściem nagłym.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e F#</div>
+                <div class="lyrics" contenteditable="true">Dla ciebie usta moje,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B</div>
+                <div class="lyrics" contenteditable="true">I ciepło moich dłoni.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C a</div>
+                <div class="lyrics" contenteditable="true">A potem przyjdą noce,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B</div>
+                <div class="lyrics" contenteditable="true">Jak psy wierne - pod nasz dom.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C B7 /x4</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Jaką drogę wybierzemy razem?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Spłonął wieczór w horyzoncie gwiazdą.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ta gwiazda świeci znów,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nad jedną z naszych dróg.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e f#(7-5) B</div>
+                <div class="lyrics" contenteditable="true">W oczy patrz najłagodniej,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f#(7-5) B</div>
+                <div class="lyrics" contenteditable="true">Jak tylko Ty potrafisz.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G a</div>
+                <div class="lyrics" contenteditable="true">I całuj wargi spłoszone,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e F#</div>
+                <div class="lyrics" contenteditable="true">Szczęściem nagłym.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e F#</div>
+                <div class="lyrics" contenteditable="true">Dla ciebie usta moje,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B</div>
+                <div class="lyrics" contenteditable="true">I ciepło moich dłoni.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C a</div>
+                <div class="lyrics" contenteditable="true">A potem przyjdą noce,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B</div>
+                <div class="lyrics" contenteditable="true">Jak psy wierne - pod nasz dom.</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 6: Moja miłość największa -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="moja-miosc-najwieksza">6. Moja miłość największa</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a g A</div>
+                <div class="lyrics" contenteditable="true">W białych zim białych wierszach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g A g A</div>
+                <div class="lyrics" contenteditable="true">Złotych sierpnia pokojach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a g A</div>
+                <div class="lyrics" contenteditable="true">Moja miłość największa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g A g A</div>
+                <div class="lyrics" contenteditable="true">Nie wie nic że jest moja</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d d7/C Bbmaj7 a7</div>
+                <div class="lyrics" contenteditable="true">Czas ją syci jak wino</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wyobraźnia upiększa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d d7/C Bbmaj7 a7</div>
+                <div class="lyrics" contenteditable="true">Moją miłość jedyną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Moją miłość największą</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a7 G</div>
+                <div class="lyrics" contenteditable="true">I nic nie powiem jej broń Boże</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d A</div>
+                <div class="lyrics" contenteditable="true">Nie powiem nic umyślnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a d a</div>
+                <div class="lyrics" contenteditable="true">Bo póki milczę to ją mnożę</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">F C Bb A</div>
+                <div class="lyrics" contenteditable="true">Gdy wyznam wszystko pryśnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a d a</div>
+                <div class="lyrics" contenteditable="true">Więc nie wyśpiewam mej miłości</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">F C Bb A</div>
+                <div class="lyrics" contenteditable="true">Niech nie wie co się dzieje</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g a</div>
+                <div class="lyrics" contenteditable="true">I nieświadoma swej piękności</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niech w myślach mych pięknieje</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a g A</div>
+                <div class="lyrics" contenteditable="true">W białych zim białych wierszach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g A g A</div>
+                <div class="lyrics" contenteditable="true">Złotych sierpnia pokojach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a g A</div>
+                <div class="lyrics" contenteditable="true">Moja miłość największa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g A g A</div>
+                <div class="lyrics" contenteditable="true">Nie wie nic że jest moja</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d d7/C Bbmaj7 a7</div>
+                <div class="lyrics" contenteditable="true">Czas ją syci jak wino</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wyobraźnia upiększa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d d7/C Bbmaj7 a7</div>
+                <div class="lyrics" contenteditable="true">Moją miłość jedyną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Moją miłość największą</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Może kiedyś po latach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Jednak szepnę nieśmiało</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kiedyś tamtego lata</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Strasznie panią kochałem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A ty przerwiesz w pół zdania</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Me wyznania zabawne</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I ja pana kochałam</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wtedy latem i dawniej</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I nic prócz małej chwilki żalu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie złączy nas kochana</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W tym dziwnym życiu śmiesznym balu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Miłości niewyznanych</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bladym tancerzom gra cichutko</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Orkiestra salonowa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A pod orkiestry każdą nutką</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Podpisać można słowa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a g A</div>
+                <div class="lyrics" contenteditable="true">W białych zim białych wierszach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g A g A</div>
+                <div class="lyrics" contenteditable="true">Złotych sierpnia pokojach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d a g A</div>
+                <div class="lyrics" contenteditable="true">Moja miłość największa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g A g A</div>
+                <div class="lyrics" contenteditable="true">Nie wie nic że jest moja</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d d7/C Bbmaj7 a7</div>
+                <div class="lyrics" contenteditable="true">Czas ją syci jak wino</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wyobraźnia upiększa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d d7/C Bbmaj7 a7</div>
+                <div class="lyrics" contenteditable="true">Moją miłość jedyną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Moją miłość największą</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 7: Bez Ciebie umieram -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="bez-ciebie-umieram">7. Bez Ciebie umieram</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C e</div>
+                <div class="lyrics" contenteditable="true">Wiem, że czekasz, że stoisz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C e</div>
+                <div class="lyrics" contenteditable="true">Boisz się, że nie przyjdę, że to był tylko żart</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G e G C</div>
+                <div class="lyrics" contenteditable="true">Nie, nie żartuję, bardzo tęsknię i czuję</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G e D C B e</div>
+                <div class="lyrics" contenteditable="true">Że bez Ciebie umieram, powietrza mi brak</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nieuchwytny, ulotny jak cień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przez blask i oczu mgnienie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Idę, nie idę, idę, biegnę</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kochany biegnę do Ciebie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G C D e</div>
+                <div class="lyrics" contenteditable="true">Biegnę, a serce mi drży</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">C G e</div>
+                <div class="lyrics" contenteditable="true">Drży, jak schwytany ptak</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D C B</div>
+                <div class="lyrics" contenteditable="true">Mówisz kocham, kocham cię</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kochaj, kochaj, kochaj mnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">La la la la la la la</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mówisz kocham, kocham cię</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kochaj, kochaj, kochaj mnie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">La la la laj la la laj</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 8: Anioł -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="anio">8. Anioł</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Mam tylko jedno skrzydło</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">To prawie tak jak anioł</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">A Ty masz skrzydło drugie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Rośnie u Twoich ramion</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Gdy staniesz przy mnie blisko</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">I mocno mnie przytulisz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Bez trudu popłyniemy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Prosto w wysokie chmury</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Szczęśliwe chwile to motyle</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Miłość wieczna tęsknota</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Zatrzymamy się w locie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Nad szczytem i urwiskiem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">I będziemy nad Ziemią</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Nieziemskim zjawiskiem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">To będzie nasza pierwsza</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Komunia bez końca</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Przytul mnie tylko mocno</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Lecimy do słońca</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Szczęśliwe chwile to motyle</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b A f# E</div>
+                <div class="lyrics" contenteditable="true">Miłość wieczna tęsknota</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 9: Kwiat jednej nocy -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="kwiat-jednej-nocy">9. Kwiat jednej nocy</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b D c#(7-5) F#7 b</div>
+                <div class="lyrics" contenteditable="true">Zakwita raz, tylko raz, biały kwiat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przez jedną noc pachnie tak, ach!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A D F#</div>
+                <div class="lyrics" contenteditable="true">Przez taką noc Królowa Jednej Nocy ogląda świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A światło dnia zdmuchuje kwiatu płomień na wiele lat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zapala się tylko na parę chwil</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdy cały świat wokół śpi, ach!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A pachnie tak jak piołun i wanilia - kwiat, biały kwiat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przez taką noc Królowa Jednej Nocy ogląda świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A A/C# D</div>
+                <div class="lyrics" contenteditable="true">Przez taką noc Królowa Jednej Nocy ogląda świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">F# b</div>
+                <div class="lyrics" contenteditable="true">Ten dziwny kwiat sekret mój dobrze zna</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Raz kocham na wiele lat, ach!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Oczami snu spojrzymy zakochani na cały świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I nie wie nikt dla kogo zakwitniemy, ja i ten kwiat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mój sekret zna biały kwiat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mój sekret zna biały kwiat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mój sekret zna biały kwiat</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 10: Nigdy więcej -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="nigdy-wiecej">10. Nigdy więcej</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e7(-5) D#maj7 d7 Bbmaj7 E7(#5) A7(#5)</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie patrz na mnie takim wzrokiem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) A7(#5) d</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie mów do mnie, że nie kochasz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) A7(#5) d (D7)</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie zatruwaj słów goryczą</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a(7-5) D9- g</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej mnie już nie karz martwą ciszą</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) d7 E7 A(7#5)</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) A7(#5) d</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie patrz na mnie takim wzrokiem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a(7-5) D9- g</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie miej takich zimnych oczu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) D#maj7 d7 Bbmaj7</div>
+                <div class="lyrics" contenteditable="true">Miłość jeszcze żyje w nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E7(#5) A7(#5) d</div>
+                <div class="lyrics" contenteditable="true">Jeszcze się nie zamknął czas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie patrz na mnie tak jak dziś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie patrz na mnie takim wzrokiem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej już nie podnoś na mnie głosu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie ryzykuj jednym słowem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mogę później nie zapomnieć, co mi powiesz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) A7(#5) d</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie patrz na mnie takim wzrokiem</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a(7-5) D9- g</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie miej takich zimnych oczu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) D#maj7 d7 Bbmaj7</div>
+                <div class="lyrics" contenteditable="true">Miłość jeszcze żyje w nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E7(#5) A7(#5) d</div>
+                <div class="lyrics" contenteditable="true">Jeszcze się nie zamknął czas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nigdy więcej nie patrz na mnie tak jak dziś</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 11: Dopóki jesteś -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="dopoki-jestes">11. Dopóki jesteś</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C H</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś ze mną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dzień jak kolęda się zaczyna</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Łagodną nutą, światłem sennym</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bladego świtu pajęczyną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki oczu jasne niebo</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Otwierasz co dnia jak ramiona</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś ze mną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W obłoki płynę, płynę, płonąc</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś blisko</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W zasięgu ramion, oczu, dłoni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zapalasz lampę jak ognisko</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przy którym ja się mogę schronić</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś ze mną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Świat tu się kończy i zaczyna</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś jeszcze</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki mogę cię zatrzymać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś ze mną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Świat tu się kończy i zaczyna</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki jesteś, jesteś jeszcze</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dopóki mogę cię zatrzymać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a-a</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A-a-a, a-a</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 12: Zwariowany czas -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="zwariowany-czas">12. Zwariowany czas</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C H</div>
+                <div class="lyrics" contenteditable="true">Konik na biegunach</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdzieś po świecie gna,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Lalki stroją się na ciuchach,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A głupiemu żal...</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Stary żeglarz z bajki</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zginął w nurtach fal,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Pierrot zdradził Colombinę,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A głupiemu żal...</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas, zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A nauka poszła sobie w las!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas, zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A nauka poszła sobie w las!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Póki na tej sali</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Trwa szalony bal,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Pędzi stara karuzela,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A głupiemu żal...</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gaśnie pod powieką</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niepotrzebna łza -- Jak szalony świat się kręci,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A głupiemu żal...</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas, zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A nauka poszła sobie w las!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwariowany czas, zwariowany czas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">A nauka poszła sobie w las!</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 13: Teatr uczy nas -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="teatr-uczy-nas">13. Teatr uczy nas</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e D C H</div>
+                <div class="lyrics" contenteditable="true">Patrz, oto teatr, przyszedłeś, boś chciał</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bo tu mądrzej lub chociaż zabawniej</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bo wiadomo, kto gra</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Z kogo śmiech, nad kim łza</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I że nic się nie stanie naprawdę</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nam wolno rolę odegrać i wyjść</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie musimy zabierać jej w życie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mylić jawy i snu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">To jest teatr i tu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kłamstwo swoje granice zna, bo</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ten teatr tam, obok nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie zna granic patosu ni blagi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Triumfuje Tartuffe</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Oklaskuje, kto żyw</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nikt o królu nie krzyknie, że nagi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Lecz co jest grane, czy dramat czy skecz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Czy tragedia, czy farsa - któż zbada?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wiemy, jak mało kto</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Że odróżnia je to</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W której chwili kurtyna</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kurtyna opada, kurtyna opada</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Patrz, oto teatr, przyszedłeś, boś chciał</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bo tu mądrzej lub chociaż zabawniej</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Bo wiadomo, kto gra</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Z kogo śmiech, nad kim łza</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I że nic się nie stanie naprawdę</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nam wolno rolę odegrać i wyjść</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie musimy zabierać jej w życie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mylić jawy i snu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">To jest teatr i tu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kłamstwo swoje granice zna, bo</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ten teatr tam, obok nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie zna granic patosu ni blagi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Triumfuje Tartuffe</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Oklaskuje, kto żyw</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nikt o królu nie krzyknie, że nagi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Lecz co jest grane, czy dramat czy skecz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Czy tragedia, czy farsa - któż zbada?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wiemy, jak mało kto</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Że odróżnia je to</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">W której chwili kurtyna</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kurtyna opada, kurtyna opada</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Teatr uczy nas żyć</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Życie nas uczy udawać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Teatr - wielka to sprawa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Patrz, słuchaj</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Najlepiej - graj!</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 14: Chcę wyjechać na wieś -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="chce-wyjechac-na-wies">14. Chcę wyjechać na wieś</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">{A B c# D}</div>
+                <div class="lyrics" contenteditable="true">Czy jest jeszcze gdzieś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">{D C# B A E}</div>
+                <div class="lyrics" contenteditable="true">prawdziwa ta wieś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A E</div>
+                <div class="lyrics" contenteditable="true">zielona, pachnąca lnem?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">Z polami wśród łąk,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">z garnkami, co schną</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">na płotach do góry dnem?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A D</div>
+                <div class="lyrics" contenteditable="true">Z chatami wśród pól</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">i z mlekiem na stół,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">z żelazkiem, co duszę ma?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niech każdy jedzie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">tam, gdzie chce,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">a ja swoje ścieżki znam!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">Chcę wyjechać na wieś,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">gdzie się zatrzymał w polu czas;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">chcę w nieruchomym stawie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">zobaczyć swoją twarz.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">Chcę wyjechać na wieś,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">dojrzałe wiśnie z drzewa rwać,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">w glinianym piecu upiec chleb</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">ostatni może raz.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Czy jest jeszcze gdzieś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">prawdziwa ta wieś,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">spokojna, wesoła wieś,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">gdzie kisi się barszcz,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">gdzie w piątek na targ</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">furmanką się rano gna,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">gdzie całe dwa dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">i noce na bis</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">niejedno wesele trwa?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niech każdy jedzie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">tam, gdzie chce,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">a ja swoje ścieżki mam!</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">Chcę wyjechać na wieś,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">gdzie się zatrzymał w polu czas;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">chcę w nieruchomym stawie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">zobaczyć swoją twarz.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A</div>
+                <div class="lyrics" contenteditable="true">Chcę wyjechać na wieś,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">E A</div>
+                <div class="lyrics" contenteditable="true">dojrzałe wiśnie z drzewa rwać,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">w glinianym piecu upiec chleb</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">ostatni może raz.</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 15: Gdy kiedyś znów zawołam Cię -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="gdy-kiedys-znow-zawoam-cie">15. Gdy kiedyś znów zawołam Cię</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d A g A F (E) A d</div>
+                <div class="lyrics" contenteditable="true">Gdy kiedyś znów zawołam cię</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A g d</div>
+                <div class="lyrics" contenteditable="true">Zawołam Cię z daleka</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g d</div>
+                <div class="lyrics" contenteditable="true">Odpowie mi gasnący dzień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">Bb F | e d</div>
+                <div class="lyrics" contenteditable="true">Że dawno już nie czekasz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g d</div>
+                <div class="lyrics" contenteditable="true">Gdy w oczach twych ogniki gwiazd</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Znów będę chciał zobaczyć</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przypomni mi przelotny wiatr</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Że inny juz w nie patrzy</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdy któryś list zatrzymam by</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie wysłać go na próżno</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">F g A d</div>
+                <div class="lyrics" contenteditable="true">O wszystkim znów zapomnisz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">i powrócisz, lecz za późno</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">F g A d</div>
+                <div class="lyrics" contenteditable="true">O wszystkim znów zapomnisz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">i powrócisz, lecz za późno</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 16: By coś zostało z tamtych lat -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="by-cos-zostao-z-tamtych-lat">16. By coś zostało z tamtych lat</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D b e A</div>
+                <div class="lyrics" contenteditable="true">Znów noc, noc, pani szalona wiruje wokół nas,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B E A D {c#}</div>
+                <div class="lyrics" contenteditable="true">Znów świat, świat wzięłam w ramiona, przystanął w miejscu czas.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b f# b</div>
+                <div class="lyrics" contenteditable="true">Znowu walc we władanie swe poddał ciebie i mnie,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b f# b</div>
+                <div class="lyrics" contenteditable="true">A ja w twe oczy wpatrzona, jednego tylko chcę:</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b E A D {c#}</div>
+                <div class="lyrics" contenteditable="true">Tak żyć, żyć, by coś zostało z tych dni, dni,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b E f# b A</div>
+                <div class="lyrics" contenteditable="true">Kiedy się miało w ramionach cały świat, gdy przy mnie byłeś ty.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I chwile, even najbłahsze, pamiętać tak, by na zawsze</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zostało coś z tych dni, zostało coś z tych dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Więc chodź, chodź ze mną pomarzyć, odszukać pomóż mi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ten czas, czas, co równoważy szaro przeżyte dni.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Jedna chwila wystarczy nam, ocal ją, niechaj trwa,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kto wie, co jutro się zdarzy, więc próbuj, tak, jak ja.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b E A D {c#}</div>
+                <div class="lyrics" contenteditable="true">Tak żyć, żyć, by coś zostało z tych dni, dni,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b E f# b A</div>
+                <div class="lyrics" contenteditable="true">Kiedy się miało w ramionach cały świat, gdy przy mnie byłeś ty.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I chwile, even najbłahsze, pamiętać tak, by na zawsze</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zostało coś z tych dni, zostało coś z tych dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Na na na</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Na na na na</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zostało coś z tych dni, zostało coś z tych dni!</div>
+            </div>
+        </div>
+
+        <!-- Piosenka 17: Obok nas -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="obok-nas">17. Obok nas</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D F# b a D</div>
+                <div class="lyrics" contenteditable="true">Gdzieś obok nas, obok nas życia nurt,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G C7 D b E e A</div>
+                <div class="lyrics" contenteditable="true">Obok nas świateł blask, miasta rytm, gwar i szum.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Obok nas płynie tłum, obok nas tyle zmian</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niesie czas, dzieje się tyle spraw.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D F# b a D7</div>
+                <div class="lyrics" contenteditable="true">A my, jak we śnie, jak we śnie, jak we mgle,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G C f#(7-5) B7</div>
+                <div class="lyrics" contenteditable="true">Razem wciąż, sami wciąż, oczy twe, usta twe.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e A D</div>
+                <div class="lyrics" contenteditable="true">Ja i ty, tylko ty, na co nam świat, na co czas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">To wszystko trwa obok, obok nas.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f(7-5) Bb -&gt; Eb</div>
+                <div class="lyrics" contenteditable="true">Wciąż obok nas, obok nas życia nurt,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">B7 -&gt; E</div>
+                <div class="lyrics" contenteditable="true">Kocham twych oczu blask, pragnę wciąż twoich ust.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f# B g#(7-5) C#</div>
+                <div class="lyrics" contenteditable="true">Ale spójrz, ale patrz, ile zmian wokół nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f# B E</div>
+                <div class="lyrics" contenteditable="true">Dzieje się tyle spraw, życie ma wiele barw.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Więc chodź póki czas z życia pić każdy haust,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Czerpać je, wdychać je, poznać trud, poznać gniew,</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Szczęścia smak, walki smak, bo żaden cień, żaden blask</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie może przejść obok, obok nas.</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie może przejść obok, obok nas.</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 18: Jej portret -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="jej-portret">18. Jej portret</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d D7</div>
+                <div class="lyrics" contenteditable="true">Bo tego nie wiesz nawet sama Ty</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g C7 Fmaj7 B</div>
+                <div class="lyrics" contenteditable="true">W tańczących wokół szarych lustrach dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b(7-5) g7 d</div>
+                <div class="lyrics" contenteditable="true">Rozbłyska Twój złoty śmiech</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">e(7-5) d</div>
+                <div class="lyrics" contenteditable="true">Przerwany w pół czuły gest</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a d D7</div>
+                <div class="lyrics" contenteditable="true">W pamięci składam wciąż</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Pasjans z samych serc</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">g C7 Fmaj7 Bb</div>
+                <div class="lyrics" contenteditable="true">Naprawde jaka jesteś, nie wie nikt</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">Eb e(7-5) A</div>
+                <div class="lyrics" contenteditable="true">To prawda, niepotrzebna wcale mi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d D7</div>
+                <div class="lyrics" contenteditable="true">Gdy nie po drodze będzie razem iść</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d D7</div>
+                <div class="lyrics" contenteditable="true">Uniosę Twój zapach snu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Rysunek ust, barwe słów</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niedokończony, jasny portret Twój</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Uniosę go, ocalę wszędzie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Czy będzięsz przy mnie, czy nie będzesz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Talizman mój, zamyśleń nagłych Twych i rzęs</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Obdarowany Tobą miła</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdy powiesz do mnie kiedys: "Wybacz"</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przez życie pójdę oglądając się wstecz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Uniosę go, ocalę wszędzie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Naprawde jaka jesteś, nie wie nikt</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">To prawda, niepotrzebna wcale mi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdy nie po drodze będzie razem iść</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Uniosę Twój zapach snu</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Rysunek ust, barwe słów</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niedokończony, jasny portret Twój</div>
+            </div>
+        </div>
+
+        <!-- Piosenka 19: Zakochani są wśród nas -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="zakochani-sa-wsrod-nas">19. Zakochani są wśród nas</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a E a</div>
+                <div class="lyrics" contenteditable="true">Zakochani są wśród nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Tak po prostu bez pamięci zakochani</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">a A d</div>
+                <div class="lyrics" contenteditable="true">Mają po dwadzieścia lat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">b(7-5) Bb a</div>
+                <div class="lyrics" contenteditable="true">Mają swój beztroski świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">F7 b(7-5) E a A</div>
+                <div class="lyrics" contenteditable="true">Swoje ścieżki które wiodą ich w nieznane</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Znają tylko kilka słów</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kilka marzeń ze swych snów</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Romantyczni zagubieni między nami</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Pośród spadających gwiazd</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">On i ona pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zapatrzeni tylko w siebie zakochani</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C A</div>
+                <div class="lyrics" contenteditable="true">Jeszcze szczęścia swego ukryć nie umieją</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C (A)</div>
+                <div class="lyrics" contenteditable="true">Tego szczęścia które odnaleźli dziś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d B7 a F7</div>
+                <div class="lyrics" contenteditable="true">Jeszcze wierzą jeszcze łudzą się nadzieją</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d B7 E</div>
+                <div class="lyrics" contenteditable="true">Że to prawda że tak zawsze musi być</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani są wśród nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Romantyczni niedzisiejsi i niemodni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani kilka dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani tak jak my</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ale szczęścia się możemy uczyć od nich</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani są wśród nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Tak po prostu bez pamięci zakochani</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mają po dwadzieścia lat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Mają swój beztroski świat</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Swoje ścieżki które wiodą ich w nieznane</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Znają tylko kilka słów</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kilka marzeń ze swych snów</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Romantyczni zagubieni między nami</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Pośród spadających gwiazd</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">On i ona pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zapatrzeni tylko w siebie zakochani</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C A</div>
+                <div class="lyrics" contenteditable="true">Jeszcze szczęścia swego ukryć nie umieją</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C (A)</div>
+                <div class="lyrics" contenteditable="true">Tego szczęścia które odnaleźli dziś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d B7 a F7</div>
+                <div class="lyrics" contenteditable="true">Jeszcze wierzą jeszcze łudzą się nadzieją</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d B7 E</div>
+                <div class="lyrics" contenteditable="true">Że to prawda że tak zawsze musi być</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani są wśród nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Romantyczni niedzisiejsi i niemodni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani kilka dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani tak jak my</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ale szczęścia się możemy uczyć od nich</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">SOLO</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C A</div>
+                <div class="lyrics" contenteditable="true">Jeszcze szczęścia swego ukryć nie umieją</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d G C (A)</div>
+                <div class="lyrics" contenteditable="true">Tego szczęścia które odnaleźli dziś</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d B7 a F7</div>
+                <div class="lyrics" contenteditable="true">Jeszcze wierzą jeszcze łudzą się nadzieją</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">d B7 E</div>
+                <div class="lyrics" contenteditable="true">Że to prawda że tak zawsze musi być</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani są wśród nas</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani pierwszy raz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Romantyczni niedzisiejsi i niemodni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani kilka dni</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zakochani tak jak my</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Ale szczęścia się możemy uczyć od nich</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Szczęścia uczyć się możemy właśnie od nich</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 20: Małe tęsknoty -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="mae-tesknoty">20. Małe tęsknoty</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">c d(7-5) c C</div>
+                <div class="lyrics" contenteditable="true">Jak dzwon, który zaledwie tylko tknąć a już śpiewa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f c G7</div>
+                <div class="lyrics" contenteditable="true">Jak zabłąkanych ptaków głos</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">c Bb6 G#maj7 C</div>
+                <div class="lyrics" contenteditable="true">Jak liść, przez chwilę piękny nim go wiatr strąci z drzewa</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f c G</div>
+                <div class="lyrics" contenteditable="true">Tak w nas głęboko skryte śpią</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# D# G7 c</div>
+                <div class="lyrics" contenteditable="true">Małe tęsknoty krótkie tęsknoty</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# D# G7</div>
+                <div class="lyrics" contenteditable="true">Znaczące prawie tyle co nic</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# D# G c</div>
+                <div class="lyrics" contenteditable="true">Nagłe i szybkie serca łopoty</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f d(7-5) c</div>
+                <div class="lyrics" contenteditable="true">Kto by nie znał ich</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nie wiadomo skąd zjawiają się zakatarzone</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wyproszą łzę i żalu łut</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Posiedzą, podumają i jak gość nieproszony</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nim się rozwidni znikną już</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# D# G7 c</div>
+                <div class="lyrics" contenteditable="true">Małe tęsknoty, krótkie tęsknoty</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# D# G7</div>
+                <div class="lyrics" contenteditable="true">Znaczące prawie tyle co nic</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G# D# G c</div>
+                <div class="lyrics" contenteditable="true">Nagłe i szybkie serca łopoty</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">f d(7-5) c</div>
+                <div class="lyrics" contenteditable="true">Kto by nie znał ich /2</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">&nbsp;</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Małe tęsknoty, ciche marzenia</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Zwiewne jak obłok kruche jak dym</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nieodgadnione w nas duszy westchnienia</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kto by tam, kto by nie znał ich</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 21: Cud niepamięci -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="cud-niepamieci">21. Cud niepamięci</h2>
+                <div class="transpose-controls">
+                    <button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button>
+                    <span class="transpose-level" title="Aktualna transpozycja">0</span>
+                    <button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button>
+                </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Gdy wszystko idzie źle</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I nie masz dokąd pójść</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Przyjaciół tłum rozproszył się</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wydaje Ci się, że</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Tak pozostanie już</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Lecz okazuje się, że nie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">(Bo oto)</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Budzi się z nocy nowy dzień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Nieskalanie, czyste niebo</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Co było wczoraj odeszło w cień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niepamięci niech się święci cud</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niepamięci cud... Niepamięci cud...</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Kloszard i wielki tuz</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Odważny i ten, co się boi</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wszyscy równi wobec czasu i płomienia</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Na moim podwórku blues</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Na zegarze wieczór</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">I nie nie czekaj tylko żyj</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">(bo)</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">To tylko chwila, może dwie</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Na nic lamenty, utyskiwania</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Co było wczoraj odeszło w cień</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niepamięci niech się święci cud</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Niepamięci cud... Niepamięci cud...</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Piosenka 22: Tolerancja -->
+        <div class="song">
+            <div class="song-content">
+                <h2 id="tolerancja">22. Tolerancja</h2><div class="transpose-controls"><button type="button" class="transpose-down" aria-label="Transponuj w dół">▼</button><span class="transpose-level" title="Aktualna transpozycja">0</span><button type="button" class="transpose-up" aria-label="Transponuj w górę">▲</button></div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Dlaczego nie mówimy o tym, co nas boli otwarcie?</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Budować ściany wokół siebie - marna sztuka</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Wrażliwe słowo, czuły dotyk wystarczą</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Czasami tylko tego pragnę, tego szukam</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics" contenteditable="true">Na miły Bóg,..</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A D G A</div>
+                <div class="lyrics" contenteditable="true">Życie nie tylko po to jest, by brać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D G A</div>
+                <div class="lyrics" contenteditable="true">Życie nie po to, by bezczynnie trwać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D G A</div>
+                <div class="lyrics" contenteditable="true">I aby żyć siebie samego trzeba dać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A -&gt; D</div>
+                <div class="lyrics" contenteditable="true">Problemy twoje, moje, nasze boje, polityka</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D b A</div>
+                <div class="lyrics" contenteditable="true">A przecież każdy włos jak nasze lata policzony</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics">Kto jest bez winy niechaj pierwszy rzuci kamień, niech rzuci</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D A D</div>
+                <div class="lyrics" contenteditable="true">Daleko raj, gdy na człowieka się zamykam</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">G A</div>
+                <div class="lyrics" contenteditable="true">Na miły Bóg,..</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">A D G A</div>
+                <div class="lyrics" contenteditable="true">Życie nie tylko po to jest, by brać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">D G A</div>
+                <div class="lyrics" contenteditable="true">Życie nie po to, by bezczynnie trwać</div>
+            </div>
+            <div class="line">
+                <div class="chords" contenteditable="true">&nbsp;</div>
+                <div class="lyrics">I aby żyć siebie samego trzeba dać!</div>
+            </div>
+        </div>
+        </div>
+    </div><!-- .songbook-container -->
+
+
+<button id="backToTop" title="Wróć do spisu treści">⬆<span>Wróć do spisu treści</span></button>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  'use strict';
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  // ==== Theme toggle (persisted) ====
+  const themeBtn = $('#themeToggle');
+  const THEME_KEY = 'songbook-theme';
+  function applyTheme(mode){
+    if(mode === 'dark'){ document.body.classList.add('theme-dark'); }
+    else{ document.body.classList.remove('theme-dark'); }
+    if (themeBtn) themeBtn.textContent = document.body.classList.contains('theme-dark') ? '☀️ Tryb dzienny' : '🌙 Tryb nocny';
+  }
+  try { applyTheme(localStorage.getItem(THEME_KEY) || 'light'); } catch(e){ applyTheme('light'); }
+  if (themeBtn){
+    themeBtn.addEventListener('click', () => {
+      const dark = !document.body.classList.contains('theme-dark');
+      applyTheme(dark ? 'dark' : 'light');
+      try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch(e){}
+    });
+  }
+
+  // ==== Back to top ====
+  const backBtn = $('#backToTop');
+  if (backBtn){
+    backBtn.style.display = 'none';
+    backBtn.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+    window.addEventListener('scroll', () => {
+      backBtn.style.display = window.scrollY > 400 ? 'flex' : 'none';
+    });
+  }
+
+  // ==== TOC drag&drop + sync ====
+  const toc = $('#tocList');
+  if (toc){
+    let dragEl = null;
+    function syncSongs(){
+      const ids = $$('#tocList li[draggable="true"]').map(li => li.dataset.target).filter(Boolean);
+      const container = $('.songbook-container');
+      if(!container) return;
+
+      // Update numbering
+      $$('#tocList li a').forEach((a, i) => {
+        const text = a.textContent.replace(/^\d+\.\s*/, '');
+        a.textContent = `${i + 1}. ${text}`;
+      });
+
+      const songs = $$('.song', container);
+      const byId = {};
+      songs.forEach(song => {
+        const h2 = song.querySelector('h2[id]');
+        if (h2 && h2.id) byId[h2.id] = song;
+      });
+      ids.forEach(id => { const s = byId[id]; if (s) container.appendChild(s); });
+      // optional: persist order
+
+      // Update song title numbers
+      $$('.song h2[id]').forEach((h2, i) => {
+        const text = h2.textContent.replace(/^\d+\.\s*/, '');
+        h2.textContent = `${i + 1}. ${text}`;
+      });
+
+      try { localStorage.setItem('toc-order', JSON.stringify(ids)); } catch(e){}
+    }
+
+    // Restore saved order (if any)
+    try {
+      const saved = JSON.parse(localStorage.getItem('toc-order') || '[]');
+      if (saved.length){
+        const liById = {};
+        $$('#tocList li[draggable="true"]').forEach(li => liById[li.dataset.target] = li);
+        saved.forEach(id => { const li = liById[id]; if (li) toc.appendChild(li); });
+        syncSongs();
+      }
+    } catch(e){}
+
+    $$('#tocList li[draggable="true"]').forEach(li => {
+      li.addEventListener('dragstart', e => {
+        dragEl = li;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', li.dataset.target || '');
+        li.classList.add('dragging');
+      });
+      li.addEventListener('dragover', e => {
+        e.preventDefault();
+        const target = e.target.closest('li[draggable="true"]');
+        if (!target || target === dragEl) return;
+        const rect = target.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / (rect.height || 1) > 0.5;
+        toc.insertBefore(dragEl, next ? target.nextSibling : target);
+      });
+      li.addEventListener('drop', e => { e.preventDefault(); syncSongs(); });
+      li.addEventListener('dragend', () => { li.classList.remove('dragging'); dragEl = null; syncSongs(); });
+    });
+  }
+
+  // ==== Smooth scroll for TOC anchors ====
+  const toolbar = $('.toolbar');
+  const toolbarH = () => toolbar ? toolbar.getBoundingClientRect().height : 0;
+  $$('#tocList a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href').slice(1);
+      const target = document.getElementById(id);
+      if (target){
+        e.preventDefault();
+        const y = target.getBoundingClientRect().top + window.scrollY - (toolbarH() + 10);
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    });
+  });
+
+  // ==== Export HTML ====
+  const exportHtmlBtn = $('#exportHtmlBtn');
+  if (exportHtmlBtn){
+    exportHtmlBtn.addEventListener('click', () => {
+      try {
+        const doc = document.documentElement.cloneNode(true);
+        // clean transient classes
+        doc.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        const serialized = '<!DOCTYPE html>\n' + doc.outerHTML;
+        const blob = new Blob([serialized], {type: 'text/html;charset=utf-8'});
+        const a = document.createElement('a');
+        const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+        a.download = 'Zaduszki_2025_export_' + ts + '.html';
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      } catch(err){
+        alert('Nie udało się wyeksportować do HTML: ' + (err && err.message ? err.message : err));
+      }
+    });
+  }
+
+  // ==== Export PDF (native print dialog) ====
+  const exportPdfBtn = $('#exportPdfBtn');
+  if (exportPdfBtn){
+    exportPdfBtn.addEventListener('click', () => {
+      window.print();
+    });
+  }
+
+  // ==== Transposition ====
+  const scales = {
+    sharp: ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'],
+    flat:  ['A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab']
+  };
+
+  const internationalToPolish = {
+    'B': 'H', 'Bb': 'B'
+  };
+
+  function transposeChord(chord, amount) {
+    // Regex to capture root note (e.g., C, F#, Bb, d, g#) and the rest of the chord
+    const chordRegex = /^([a-gA-G][#b]?)(.*)/;
+    const match = chord.match(chordRegex);
+    if (!match) return chord; // Not a chord we can transpose
+
+    let root = match[1];
+    const modifier = match[2];
+
+    // Determine if it's a minor chord based on the root note case
+    const isMinor = root === root.toLowerCase();
+    const upperRoot = root.charAt(0).toUpperCase() + root.slice(1);
+
+    // --- IMPROVED LOGIC ---
+    // When transposing up, prefer sharps. When down, prefer flats.
+    // If the original chord is flat, stick to flats unless it becomes natural.
+    const useFlatScale = (amount < 0 && !upperRoot.includes('#')) || (upperRoot.includes('b') && amount >= 0);
+    const scale = useFlatScale ? scales.flat : scales.sharp;
+    
+    let index = scale.indexOf(upperRoot);
+    // If not found, try the other scale (e.g. for Gb in sharp scale)
+    if (index === -1) {
+        const otherScale = scale === scales.sharp ? scales.flat : scales.sharp;
+        index = otherScale.indexOf(upperRoot);
+        if (index === -1) return chord; // Should not happen
+    }
+
+    // Transpose
+    const newIndex = (index + amount + scale.length) % scale.length;
+    let newRoot = scale[newIndex];
+
+    // Convert back to Polish notation if needed
+    const polishRoot = internationalToPolish[newRoot];
+    if (polishRoot) {
+        newRoot = polishRoot;
+    }
+
+    // Restore minor case if original was minor
+    if (isMinor) {
+        newRoot = newRoot.toLowerCase();
+    }
+
+    return newRoot + modifier;
+  }
+
+  function handleTranspose(song, amount) {
+    const levelEl = song.querySelector('.transpose-level');
+    let currentLevel = parseInt(levelEl.dataset.level || '0', 10);
+    currentLevel += amount;
+    levelEl.dataset.level = currentLevel;
+    levelEl.textContent = currentLevel > 0 ? `+${currentLevel}` : currentLevel;
+
+    const chordElements = song.querySelectorAll('.chords');
+    chordElements.forEach(el => {
+      // Store original chords if not already stored
+      if (!el.dataset.originalChords) {
+        el.dataset.originalChords = el.textContent;
+      }
+
+      const originalChords = el.dataset.originalChords;
+      const chordRegex = /[a-gA-G][#b]?(?:maj|m|dim|aug|sus|add)?[0-9]?(?:-5|#5|b5|#9|b9|\(7-5\))?(\/[A-G][#b]?)?/g;
+      
+      const newChords = originalChords.replace(chordRegex, (match) => {
+        return transposeChord(match, currentLevel);
+      });
+      el.textContent = newChords;
+    });
+  }
+
+  $$('.song').forEach(song => {
+    const upBtn = song.querySelector('.transpose-up');
+    const downBtn = song.querySelector('.transpose-down');
+    if (upBtn) upBtn.addEventListener('click', () => handleTranspose(song, 1));
+    if (downBtn) downBtn.addEventListener('click', () => handleTranspose(song, -1));
+  });
+
+  // ==== Delete song ====
+  function handleDeleteSong(e) {
+    if (!e.target.classList.contains('delete-song-btn')) return;
+
+    const li = e.target.closest('li[data-target]');
+    if (!li) return;
+
+    const songTitle = (li.querySelector('a')?.textContent || 'tej piosenki').trim();
+    if (!window.confirm(`Czy na pewno chcesz usunąć piosenkę "${songTitle}"?`)) {
+      return;
+    }
+
+    const targetId = li.dataset.target;
+    const songEl = document.getElementById(targetId)?.closest('.song');
+
+    if (songEl) songEl.remove();
+    li.remove();
+  }
+  const tocList = $('#tocList');
+  if (tocList) tocList.addEventListener('click', handleDeleteSong);
+});
+</script>
+
+</body>
+</html>
