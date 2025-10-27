@@ -150,6 +150,14 @@ h2{text-align:left;font-size:22px;margin-bottom:6px;}
   cursor:grab;
   padding:4px 0 4px 6px;
   border-left:2px solid transparent;
+    touch-action: pan-y;
+}
+#tocList li,
+#tocList li a,
+#tocList li button{
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
 }
 #tocList li:active {
   cursor: grabbing;
@@ -3607,6 +3615,7 @@ document.addEventListener('DOMContentLoaded', () => {
       li.ondragstart = null;
       li.ondragover = null;
       li.ondragend = null;
+            li.oncontextmenu = null;
       
       li.addEventListener('dragstart', function(e) {
         dragEl = this;
@@ -3633,6 +3642,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { globalDragState.justFinished = false; }, 200);
         syncSongs();
       });
+      
+            li.addEventListener('contextmenu', function(e) {
+                if (globalDragState.isDragging || globalDragState.justFinished) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
       
       // Blokada kliknięcia w link zaraz po przeciągnięciu
       if (anchor) {
