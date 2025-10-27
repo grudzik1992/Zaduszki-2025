@@ -144,17 +144,34 @@ h1{text-align:center;font-size:36px;margin:16px 0 4px;}
 h2{text-align:left;font-size:22px;margin-bottom:6px;}
 #tocList{line-height:1.8;font-size:17px;margin:0;padding-left:24px;}
 #tocList li{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor:grab;
-  padding:4px 0 4px 6px;
-  border-left:2px solid transparent;
+    display: flex;
+    justify-content:flex-start;
+    align-items: center;
+    gap:10px;
+    cursor:grab;
+    padding:4px 0 4px 6px;
+    border-left:2px solid transparent;
     touch-action: pan-y;
+}
+#tocList .toc-drag-handle{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    font-size:18px;
+    color:var(--muted);
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+}
+#tocList li.dragging .toc-drag-handle{
+    cursor:grabbing;
+    color:var(--accent);
 }
 #tocList li,
 #tocList .toc-link,
-#tocList li button{
+#tocList li button,
+#tocList .toc-drag-handle{
     -webkit-touch-callout:none;
     -webkit-user-select:none;
     user-select:none;
@@ -199,7 +216,7 @@ h2{text-align:left;font-size:22px;margin-bottom:6px;}
   cursor: pointer;
   padding: 0 8px;
   border-radius: 50%;
-  margin-left: 10px;
+    margin-left: auto;
 }
 .delete-song-btn:hover { background: #f8d7da; color: #721c24; }
 body.theme-dark .delete-song-btn:hover { background: #583034; color: #f8d7da; }
@@ -392,28 +409,28 @@ body.theme-dark .song .chords{ color:#fff !important; }
         <div class="toc" style="margin-bottom:40px; padding:20px; background:var(--bg); border:1px solid var(--border); border-radius:6px;">
             <h2 style="margin-top:0; border-bottom:2px solid var(--border); padding-bottom:5px;">Spis treści</h2>
             <ol id="tocList" style="line-height:1.8; font-size:17px; margin:0; padding-left:20px;">
-                <li draggable="true" data-target="dla-krzysia"><button type="button" class="toc-link">1. Dla Krzysia</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="kto-tak-adnie-kradnie"><button type="button" class="toc-link">2. Kto tak ładnie kradnie</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="zyczenia-z-caego-serca"><button type="button" class="toc-link">3. Życzenia z całego serca</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="powrocmy-jak-za-dawnych-lat"><button type="button" class="toc-link">4. Powróćmy jak za dawnych lat</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="wymysliem-ciebie"><button type="button" class="toc-link">5. Wymyśliłem Ciebie</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="moja-miosc-najwieksza"><button type="button" class="toc-link">6. Moja miłość największa</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="bez-ciebie-umieram"><button type="button" class="toc-link">7. Bez Ciebie umieram</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="anio"><button type="button" class="toc-link">8. Anioł</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="kwiat-jednej-nocy"><button type="button" class="toc-link">9. Kwiat jednej nocy</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="nigdy-wiecej"><button type="button" class="toc-link">10. Nigdy więcej</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="dopoki-jestes"><button type="button" class="toc-link">11. Dopóki jesteś</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="zwariowany-czas"><button type="button" class="toc-link">12. Zwariowany czas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="teatr-uczy-nas"><button type="button" class="toc-link">13. Teatr uczy nas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="chce-wyjechac-na-wies"><button type="button" class="toc-link">14. Chcę wyjechać na wieś</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="gdy-kiedys-znow-zawoam-cie"><button type="button" class="toc-link">15. Gdy kiedyś znów zawołam Cię</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="by-cos-zostao-z-tamtych-lat"><button type="button" class="toc-link">16. By coś zostało z tamtych lat</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="obok-nas"><button type="button" class="toc-link">17. Obok nas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="jej-portret"><button type="button" class="toc-link">18. Jej portret</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="zakochani-sa-wsrod-nas"><button type="button" class="toc-link">19. Zakochani są wśród nas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="mae-tesknoty"><button type="button" class="toc-link">20. Małe tęsknoty</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="cud-niepamieci"><button type="button" class="toc-link">21. Cud niepamięci</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
-                <li draggable="true" data-target="tolerancja"><button type="button" class="toc-link">22. Tolerancja</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="dla-krzysia"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">1. Dla Krzysia</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="kto-tak-adnie-kradnie"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">2. Kto tak ładnie kradnie</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="zyczenia-z-caego-serca"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">3. Życzenia z całego serca</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="powrocmy-jak-za-dawnych-lat"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">4. Powróćmy jak za dawnych lat</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="wymysliem-ciebie"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">5. Wymyśliłem Ciebie</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="moja-miosc-najwieksza"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">6. Moja miłość największa</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="bez-ciebie-umieram"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">7. Bez Ciebie umieram</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="anio"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">8. Anioł</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="kwiat-jednej-nocy"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">9. Kwiat jednej nocy</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="nigdy-wiecej"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">10. Nigdy więcej</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="dopoki-jestes"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">11. Dopóki jesteś</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="zwariowany-czas"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">12. Zwariowany czas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="teatr-uczy-nas"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">13. Teatr uczy nas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="chce-wyjechac-na-wies"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">14. Chcę wyjechać na wieś</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="gdy-kiedys-znow-zawoam-cie"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">15. Gdy kiedyś znów zawołam Cię</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="by-cos-zostao-z-tamtych-lat"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">16. By coś zostało z tamtych lat</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="obok-nas"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">17. Obok nas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="jej-portret"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">18. Jej portret</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="zakochani-sa-wsrod-nas"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">19. Zakochani są wśród nas</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="mae-tesknoty"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">20. Małe tęsknoty</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="cud-niepamieci"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">21. Cud niepamięci</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
+                <li draggable="true" data-target="tolerancja"><span class="toc-drag-handle" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">☰</span><button type="button" class="toc-link">22. Tolerancja</button><button class="delete-song-btn" title="Usuń piosenkę">×</button></li>
             </ol>
             <p style="margin-top:10px; color:var(--muted); font-size:13px;">Przeciągaj pozycje, by zmienić kolejność utworów.</p>
         </div>
@@ -3377,6 +3394,14 @@ document.addEventListener('DOMContentLoaded', () => {
         $$('#tocList li').forEach(li => {
             const linkBtn = li.querySelector('.toc-link');
             if (!linkBtn) return;
+                if (!li.querySelector('.toc-drag-handle')) {
+                    const handle = document.createElement('span');
+                    handle.className = 'toc-drag-handle';
+                    handle.setAttribute('aria-hidden', 'true');
+                            handle.title = 'Przeciągnij, aby zmienić kolejność';
+                    handle.textContent = '☰';
+                    li.insertBefore(handle, linkBtn);
+                }
             if (li.dataset.target && !linkBtn.dataset.target) {
                 linkBtn.dataset.target = li.dataset.target;
             } else if (!li.dataset.target && linkBtn.dataset.target) {
@@ -3552,7 +3577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const li = document.createElement('li');
     li.draggable = true;
     li.dataset.target = safeId;
-    li.innerHTML = `<button type=\"button\" class=\"toc-link\" data-target=\"${safeId}\">${number}. ${title}</button><button class=\"delete-song-btn\" title=\"Usuń piosenkę\">×</button>`;
+    li.innerHTML = `<span class=\"toc-drag-handle\" aria-hidden=\"true\" title=\"Przeciągnij, aby zmienić kolejność\">☰</span><button type=\"button\" class=\"toc-link\" data-target=\"${safeId}\">${number}. ${title}</button><button class=\"delete-song-btn\" title=\"Usuń piosenkę\">×</button>`;
     tocList.appendChild(li);
 
     // SONG
@@ -3615,7 +3640,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $$('.song').forEach(initTranspose);
 
     // === Drag & drop TOC ===
-    const DRAG_CLICK_COOLDOWN = 700;
+        const DRAG_CLICK_COOLDOWN = 500;
     let globalDragState = { isDragging: false, justFinished: false, cooldownTimer: null };
   
     function initDragDrop(){
