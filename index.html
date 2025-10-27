@@ -69,6 +69,69 @@ a:hover{text-decoration:underline;}
 }
 .toolbar button:hover{background:var(--accent);color:#fff;transform:translateY(-1px);}
 
+/* Hamburger menu dla wąskich ekranów */
+.hamburger-menu {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  padding: 8px;
+  background: var(--button-bg);
+  border-radius: 8px;
+  transition: background 0.25s;
+}
+.hamburger-menu:hover {
+  background: var(--accent);
+}
+.hamburger-menu span {
+  display: block;
+  width: 24px;
+  height: 3px;
+  background: var(--button-fg);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+.hamburger-menu.active span:nth-child(1) {
+  transform: rotate(45deg) translateY(9px);
+}
+.hamburger-menu.active span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger-menu.active span:nth-child(3) {
+  transform: rotate(-45deg) translateY(-9px);
+}
+
+.toolbar-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .hamburger-menu {
+    display: flex;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .toolbar-buttons {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .toolbar-buttons.active {
+    display: flex;
+  }
+  .toolbar-buttons button {
+    width: 100%;
+    text-align: left;
+  }
+}
+
 /* Container */
 .songbook-container{
   max-width:900px;margin:0 auto;padding:20px;
@@ -88,8 +151,22 @@ h2{text-align:left;font-size:22px;margin-bottom:6px;}
   padding:4px 0 4px 6px;
   border-left:2px solid transparent;
 }
-#tocList li a { flex-grow: 1; }
-#tocList li.dragging{opacity:.6;border-left-color:var(--accent);}
+#tocList li:active {
+  cursor: grabbing;
+}
+#tocList li a { 
+  flex-grow: 1;
+  cursor: pointer;
+}
+#tocList li.dragging{
+  opacity:.6;
+  border-left-color:var(--accent); 
+  cursor: grabbing;
+}
+#tocList li.dragging a {
+  user-select: none;
+  cursor: grabbing;
+}
 #tocList a{color:var(--link);}
 #tocList a:hover{color:var(--accent);}
 .delete-song-btn {
@@ -275,9 +352,16 @@ body.theme-dark .song .chords{ color:#fff !important; }
 <body>
     <div class="songbook-container">
         <div class="toolbar">
-            <button id="themeToggle" title="Przełącz tryb nocny/dzienny">🌙 / ☀️</button>
-            <button id="exportHtmlBtn" title="Zapisz jako HTML">💾 Eksport do HTML</button>
-<button id="exportPdfBtn" title="Zapisz jako PDF">📄 Eksport do PDF</button>
+            <div class="hamburger-menu" id="hamburgerMenu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="toolbar-buttons" id="toolbarButtons">
+                <button id="themeToggle" title="Przełącz tryb nocny/dzienny">🌙 / ☀️</button>
+                <button id="exportHtmlBtn" title="Zapisz jako HTML">💾 Eksport do HTML</button>
+                <button id="exportPdfBtn" title="Zapisz jako PDF">📄 Eksport do PDF</button>
+            </div>
         </div>
 
         <h1 style="text-align:center; font-size:36px; margin:0 0 10px;">Zaduszki 2025</h1>
@@ -3240,6 +3324,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const tocList  = $('#tocList');
   const songbook = $('.songbook-container');
 
+  // === Hamburger menu toggle ===
+  const hamburger = $('#hamburgerMenu');
+  const toolbarButtons = $('#toolbarButtons');
+  
+  if (hamburger && toolbarButtons) {
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('active');
+      toolbarButtons.classList.toggle('active');
+    });
+    
+    // Zamknij menu po kliknięciu przycisku w menu
+    toolbarButtons.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        hamburger.classList.remove('active');
+        toolbarButtons.classList.remove('active');
+      }
+    });
+    
+    // Zamknij menu przy zmianie rozmiaru okna na desktop
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) {
+        hamburger.classList.remove('active');
+        toolbarButtons.classList.remove('active');
+      }
+    });
+  }
+
   // === Ensure TOC <li> have data-target + draggable (derive from anchor href) ===
   if (tocList) {
     $$('#tocList li').forEach(li => {
@@ -3306,53 +3417,110 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmBtn = $('#confirmAddSong');
   const cancelBtn  = $('#cancelAddSong');
 
-  // === Toolbar action buttons ===
-  if (toolbar) {
-    const addBtn   = document.createElement('button'); addBtn.textContent = '➕ Dodaj utwór';
-    const saveBtn  = document.createElement('button'); saveBtn.textContent = '💾 Zapisz zmiany';
-    const clearBtn = document.createElement('button'); clearBtn.textContent = '🗑️ Wyczyść dane';
-    toolbar.prepend(clearBtn); toolbar.prepend(saveBtn); toolbar.prepend(addBtn);
+    // === Toolbar action buttons ===
+    const exportHtmlBtn = $('#exportHtmlBtn');
+    const exportPdfBtn  = $('#exportPdfBtn');
+    const actionsHost   = toolbarButtons || toolbar;
 
-    // Modal show/hide
-    addBtn.addEventListener('click', () => { modal.style.display = 'flex'; titleInput && titleInput.focus(); });
-    cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; if(titleInput) titleInput.value=''; if(lyricsInput) lyricsInput.value=''; });
-    modal.addEventListener('click', (e) => { if (e.target === modal) cancelBtn.click(); });
+    const closeModal = () => {
+        if (modal) modal.style.display = 'none';
+        if (titleInput) titleInput.value = '';
+        if (lyricsInput) lyricsInput.value = '';
+    };
 
-    // Confirm add
-    confirmBtn.addEventListener('click', () => {
-      const title = (titleInput?.value || '').trim();
-      const text  = (lyricsInput?.value || '').trim();
-      if (!title || !text) return alert('Uzupełnij tytuł i tekst.');
-      addSong(title, text);
-      cancelBtn.click();
+    if (actionsHost) {
+        const addBtn   = document.createElement('button');
+        addBtn.id = 'addSongBtn';
+        addBtn.textContent = '➕ Dodaj utwór';
+
+        const saveBtn  = document.createElement('button');
+        saveBtn.id = 'saveSongbookBtn';
+        saveBtn.textContent = '💾 Zapisz zmiany';
+
+        const clearBtn = document.createElement('button');
+        clearBtn.id = 'clearSongbookBtn';
+        clearBtn.textContent = '🗑️ Wyczyść dane';
+
+        actionsHost.prepend(clearBtn);
+        actionsHost.prepend(saveBtn);
+        actionsHost.prepend(addBtn);
+
+        addBtn.addEventListener('click', () => {
+            if (!modal) return;
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => titleInput?.focus());
+        });
+
+        cancelBtn?.addEventListener('click', closeModal);
+        modal?.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        confirmBtn?.addEventListener('click', () => {
+            const title = (titleInput?.value || '').trim();
+            const text  = (lyricsInput?.value || '').trim();
+            if (!title || !text) {
+                alert('Uzupełnij tytuł i tekst.');
+                return;
+            }
+            addSong(title, text);
+            closeModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (modal?.style.display === 'flex') {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeModal();
+                }
+                if (e.key === 'Enter' && (document.activeElement === titleInput || document.activeElement === lyricsInput)) {
+                    e.preventDefault();
+                    confirmBtn?.click();
+                }
+            }
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const songs = [];
+            $$('.song').forEach(song => {
+                const h2 = song.querySelector('h2');
+                const title = (h2?.textContent || '').replace(/^\d+\.\s*/, '');
+                const id = h2?.id || '';
+                const lines = $$('.line', song).map(line => ({
+                    chords: $('.chords', line)?.innerText || '',
+                    lyrics: $('.lyrics', line)?.innerText || ''
+                }));
+                songs.push({ title, id, lines });
+            });
+            localStorage.setItem('songbook', JSON.stringify(songs));
+            alert('✅ Zapisano zmiany lokalnie.');
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (window.confirm('Usunąć wszystkie lokalne zmiany i przywrócić oryginalny śpiewnik?')) {
+                localStorage.removeItem('songbook');
+                localStorage.removeItem('toc-order');
+                location.reload();
+            }
+        });
+    }
+
+    exportHtmlBtn?.addEventListener('click', () => {
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        const serialized = '<!DOCTYPE html>\n' + clone.outerHTML;
+        const blob = new Blob([serialized], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        a.download = `Zaduszki_2025_${ts}.html`;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(a.href);
+        a.remove();
     });
 
-    // Save
-    saveBtn.addEventListener('click', () => {
-      const songs = [];
-      $$('.song').forEach(song => {
-        const h2 = song.querySelector('h2');
-        const title = (h2?.textContent || '').replace(/^\d+\.\s*/, '');
-        const id = h2?.id || '';
-        const lines = $$('.line', song).map(line => ({
-          chords: $('.chords', line)?.innerText || '',
-          lyrics: $('.lyrics', line)?.innerText || ''
-        }));
-        songs.push({ title, id, lines });
-      });
-      localStorage.setItem('songbook', JSON.stringify(songs));
-      alert('✅ Zapisano zmiany lokalnie.');
-    });
-
-    // Clear
-    clearBtn.addEventListener('click', () => {
-      if (window.confirm('Usunąć wszystkie lokalne zmiany i przywrócić oryginalny śpiewnik?')) {
-        localStorage.removeItem('songbook');
-        localStorage.removeItem('toc-order');
-        location.reload();
-      }
-    });
-  }
+    exportPdfBtn?.addEventListener('click', () => window.print());
 
   // === Add song helper ===
   function addSong(title, text) {
@@ -3427,21 +3595,63 @@ document.addEventListener('DOMContentLoaded', () => {
   $$('.song').forEach(initTranspose);
 
   // === Drag & drop TOC ===
+  let globalDragState = { isDragging: false, justFinished: false };
+  
   function initDragDrop(){
     let dragEl = null;
+    
     $$('#tocList li[draggable=\"true\"]').forEach(li => {
-      li.addEventListener('dragstart', e => {
-        dragEl = li; e.dataTransfer.effectAllowed = 'move'; li.classList.add('dragging');
+      const anchor = li.querySelector('a[href^=\"#\"]');
+      
+      // Usuń stare listenery jeśli były
+      li.ondragstart = null;
+      li.ondragover = null;
+      li.ondragend = null;
+      
+      li.addEventListener('dragstart', function(e) {
+        dragEl = this;
+        globalDragState.isDragging = true;
+        globalDragState.justFinished = false;
+        e.dataTransfer.effectAllowed = 'move';
+        this.classList.add('dragging');
       });
-      li.addEventListener('dragover', e => {
+      
+      li.addEventListener('dragover', function(e) {
         e.preventDefault();
         const t = e.target.closest('li[draggable=\"true\"]');
         if (!t || t === dragEl) return;
         const r = t.getBoundingClientRect();
-        const next = (e.clientY - r.top) / (r.height || 1) > 0.5;
+        const next = (e.clientY - r.top) / r.height > 0.5;
         tocList.insertBefore(dragEl, next ? t.nextSibling : t);
       });
-      li.addEventListener('dragend', () => { li.classList.remove('dragging'); dragEl = null; syncSongs(); });
+      
+      li.addEventListener('dragend', function() {
+        this.classList.remove('dragging');
+        dragEl = null;
+        globalDragState.isDragging = false;
+        globalDragState.justFinished = true;
+        setTimeout(() => { globalDragState.justFinished = false; }, 200);
+        syncSongs();
+      });
+      
+      // Blokada kliknięcia w link zaraz po przeciągnięciu
+      if (anchor) {
+        anchor.addEventListener('click', function(e) {
+          if (globalDragState.justFinished) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
+        
+        // Blokada menu kontekstowego podczas przeciągania
+        anchor.addEventListener('contextmenu', function(e) {
+          if (globalDragState.isDragging || globalDragState.justFinished) {
+            e.preventDefault();
+            return false;
+          }
+        });
+      }
     });
   }
 
@@ -3534,114 +3744,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <style>
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; }
-.modal-box { background:#fff; color:#111; border-radius:10px; max-width:600px; width:90%; padding:20px; box-shadow:0 8px 30px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:10px; }
-.modal-box h2 { text-align:center; margin-bottom:5px; }
-.modal-box input, .modal-box textarea { width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:16px; }
-.modal-box textarea { min-height:160px; font-family:monospace; }
-.modal-box .actions { display:flex; justify-content:flex-end; gap:10px; }
-.modal-box button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:15px; }
-.modal-box .primary { background:#0078ff; color:#fff; }
-.modal-box button:hover { opacity:0.9; }
-@media print {
-  body { background:white !important; color:black !important; }
-  .toolbar, #backToTop, .modal { display:none !important; }
-  .song { page-break-after: always; margin-bottom:40px; }
-  h2 { font-size:20px; border-bottom:1px solid #ccc; padding-bottom:4px; }
-  .line { display:block; margin:4px 0; }
-  .chords { font-weight:bold; font-family:monospace; }
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded',()=>{
- const toolbar=document.querySelector('.toolbar');
- const toc=document.querySelector('#tocList');
- const songbook=document.querySelector('.songbook-container');
- const modal=document.querySelector('#addSongModal');
- const titleIn=document.querySelector('#songTitle');
- const lyricsIn=document.querySelector('#songLyrics');
- const confirm=document.querySelector('#confirmAddSong');
- const cancel=document.querySelector('#cancelAddSong');
-
- if(toolbar){
-   const add=document.createElement('button'); add.textContent='➕ Dodaj utwór';
-   const save=document.createElement('button'); save.textContent='💾 Zapisz';
-   const expHTML=document.createElement('button'); expHTML.textContent='💽 Eksport HTML';
-   const expPDF=document.createElement('button'); expPDF.textContent='🖨️ Eksport PDF';
-   const clear=document.createElement('button'); clear.textContent='🗑️ Wyczyść';
-   toolbar.prepend(clear); toolbar.prepend(expPDF); toolbar.prepend(expHTML); toolbar.prepend(save); toolbar.prepend(add);
-
-   add.onclick=()=>{ modal.style.display='flex'; titleIn.focus(); };
-   cancel.onclick=()=>{ modal.style.display='none'; titleIn.value=''; lyricsIn.value=''; };
-   modal.onclick=e=>{ if(e.target===modal) cancel.click(); };
-   document.addEventListener('keydown',e=>{ if(e.key==='Escape') cancel.click(); if(e.key==='Enter'&&modal.style.display==='flex'){confirm.click();}});
-
-   confirm.onclick=()=>{
-     const title=titleIn.value.trim(); const text=lyricsIn.value.trim();
-     if(!title||!text) return alert('Podaj tytuł i tekst.');
-     const id=title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-');
-     const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
-     const li=document.createElement('li'); li.dataset.target=id; li.draggable=true;
-     li.innerHTML=`<a href="#${id}">${toc.children.length+1}. ${title}</a><button class="delete-song-btn">×</button>`;
-     toc.appendChild(li);
-     const div=document.createElement('div');
-     div.className='song';
-     div.innerHTML=`<div class="song-content"><h2 id="${id}">${toc.children.length}. ${title}</h2>
-       <div class="transpose-controls"><button class="transpose-down">▼</button><span class="transpose-level">0</span><button class="transpose-up">▲</button></div>
-       ${lines.map(l=>`<div class="line"><div class="chords" contenteditable="true">&nbsp;</div><div class="lyrics" contenteditable="true">${l}</div></div>`).join('')}</div>`;
-     songbook.appendChild(div);
-     modal.style.display='none'; titleIn.value=''; lyricsIn.value='';
-     window.scrollTo({top:div.offsetTop,behavior:'smooth'});
-   };
-
-   save.onclick=()=>{
-     const data=[];
-     document.querySelectorAll('.song').forEach(s=>{
-       const title=s.querySelector('h2')?.textContent.replace(/^\d+\.\s*/,'')||'';
-       const id=s.querySelector('h2')?.id||'';
-       const lines=[...s.querySelectorAll('.line')].map(l=>({chords:l.querySelector('.chords')?.innerText||'',lyrics:l.querySelector('.lyrics')?.innerText||''}));
-       data.push({title,id,lines});
-     });
-     localStorage.setItem('songbook',JSON.stringify(data));
-     alert('✅ Zapisano w pamięci przeglądarki.');
-   };
-
-   expHTML.onclick=()=>{
-     const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
-     const blob=new Blob([html],{type:'text/html'});
-     const a=document.createElement('a');
-     const t=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-     a.download='Zaduszki_2025_'+t+'.html'; a.href=URL.createObjectURL(blob);
-     a.click(); URL.revokeObjectURL(a.href);
-   };
-
-   expPDF.onclick=()=>{ window.print(); };
-
-   clear.onclick=()=>{
-     if(window.confirm('Usunąć dane lokalne?')){localStorage.clear();location.reload();}
-   };
- }
-
- // przywracanie zapisanych piosenek
- const saved=localStorage.getItem('songbook');
- if(saved){
-   try{
-     const songs=JSON.parse(saved);
-     toc.innerHTML=''; document.querySelectorAll('.song').forEach(s=>s.remove());
-     songs.forEach((s,i)=>{
-       const li=document.createElement('li'); li.dataset.target=s.id; li.innerHTML=`<a href="#${s.id}">${i+1}. ${s.title}</a><button class="delete-song-btn">×</button>`; toc.appendChild(li);
-       const div=document.createElement('div'); div.className='song';
-       div.innerHTML=`<div class="song-content"><h2 id="${s.id}">${i+1}. ${s.title}</h2>${s.lines.map(l=>`<div class="line"><div class="chords" contenteditable="true">${l.chords||'&nbsp;'}</div><div class="lyrics" contenteditable="true">${l.lyrics}</div></div>`).join('')}</div>`;
-       songbook.appendChild(div);
-     });
-   }catch(e){console.error(e);}
- }
-});
-</script>
-
-
-<style>
 /* === Toolbar (dark, responsive) === */
 .toolbar {
   position: sticky; top: 0; z-index: 100;
@@ -3675,142 +3777,6 @@ body.theme-dark { background: #121212; color: #f0f0f0; }
 .theme-dark .modal-box { background: #1c1c1c; color: #f0f0f0; }
 .theme-dark .modal-box input, .theme-dark .modal-box textarea { background:#111; color:#f0f0f0; border-color:#333; }
 </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const toolbar = document.querySelector('.toolbar');
-  if (!toolbar) return;
-
-  // 1) Remove duplicated action buttons, keep possible theme toggle if present
-  const killList = ['dodaj', 'zapisz', 'eksport', 'pdf', 'wyczyść', 'wyczysc'];
-  [...toolbar.querySelectorAll('button, a')].forEach(btn => {
-    const t = (btn.textContent || '').toLowerCase();
-    const isAction = killList.some(k => t.includes(k));
-    if (isAction) btn.remove();
-  });
-
-  // 2) Create our styled buttons (icons + text)
-  function mkBtn(id, icon, text) {
-    const b = document.createElement('button');
-    b.id = id; b.className = 'btn'; b.type = 'button';
-    b.innerHTML = `<span class="ico">${icon}</span><span>${text}</span>`;
-    return b;
-  }
-  const addBtn   = mkBtn('addSongBtn','➕','Dodaj utwór');
-  const saveBtn  = mkBtn('saveBtn','💾','Zapisz');
-  const expHBtn  = mkBtn('exportHtmlBtn','💽','Eksport HTML');
-  const expPBtn  = mkBtn('exportPdfBtn','🖨️','Eksport PDF');
-  const clearBtn = mkBtn('restoreBtn','↩️','Przywróć domyślną wersję');
-  const spacer   = document.createElement('div'); spacer.className = 'spacer';
-
-  // Insert buttons at the start, leave theme toggle (if exists) on the right
-  const themeToggle = toolbar.querySelector('#themeToggle');
-  toolbar.prepend(addBtn, saveBtn, expHBtn, expPBtn, clearBtn, spacer);
-  if (themeToggle) { themeToggle.classList.add('btn'); toolbar.appendChild(themeToggle); }
-
-  // 3) Wire up behaviors — reuse existing functions if available
-
-  // Modal controls (fallback if not present)
-  const modal = document.querySelector('#addSongModal');
-  const titleIn = document.querySelector('#songTitle');
-  const lyricsIn = document.querySelector('#songLyrics');
-  const confirmAdd = document.querySelector('#confirmAddSong');
-  const cancel  = document.querySelector('#cancelAddSong');
-
-  function callAddSong(title, text) {
-    if (typeof window.addSong === 'function') {
-      window.addSong(title, text);
-      return;
-    }
-    // Fallback minimal add if original function name is different/missing
-    const toc = document.querySelector('#tocList');
-    const songbook = document.querySelector('.songbook-container');
-    const safeId = title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-');
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    const li = document.createElement('li');
-    li.dataset.target = safeId; li.draggable = true;
-    const number = (toc?.children.length || 0) + 1;
-    li.innerHTML = `<a href="#${safeId}">${number}. ${title}</a><button class="delete-song-btn">×</button>`;
-    toc && toc.appendChild(li);
-    const div = document.createElement('div');
-    div.className = 'song';
-    div.innerHTML = `<div class="song-content"><h2 id="${safeId}">${number}. ${title}</h2>
-      <div class="transpose-controls"><button class="transpose-down">▼</button><span class="transpose-level" data-level="0">0</span><button class="transpose-up">▲</button></div>
-      ${lines.map(l=>`<div class="line"><div class="chords" contenteditable="true">&nbsp;</div><div class="lyrics" contenteditable="true">${l}</div></div>`).join('')}</div>`;
-    songbook && songbook.appendChild(div);
-    window.scrollTo({top:div.offsetTop,behavior:'smooth'});
-  }
-
-  function addFromModal() {
-    const title = (titleIn?.value || '').trim();
-    const text  = (lyricsIn?.value || '').trim();
-    if (!title || !text) return alert('Podaj tytuł i tekst.');
-    callAddSong(title, text);
-    if (modal) modal.style.display='none';
-    if (titleIn) titleIn.value='';
-    if (lyricsIn) lyricsIn.value='';
-  }
-
-  addBtn.addEventListener('click', () => {
-    if (modal) {
-      modal.style.display='flex';
-      setTimeout(()=>titleIn && titleIn.focus(), 10);
-    }
-  });
-  confirmAdd && confirmAdd.addEventListener('click', addFromModal);
-  cancel && cancel.addEventListener('click', () => { modal.style.display='none'; });
-
-  document.addEventListener('keydown', (e)=>{
-    if (modal && modal.style.display==='flex' && e.key==='Enter') { e.preventDefault(); addFromModal(); }
-    if (modal && modal.style.display==='flex' && e.key==='Escape') { e.preventDefault(); modal.style.display='none'; }
-  });
-  modal && modal.addEventListener('click', (e)=>{ if (e.target===modal) modal.style.display='none'; });
-
-  // Save current DOM to localStorage
-  saveBtn.addEventListener('click', () => {
-    const data=[];
-    document.querySelectorAll('.song').forEach(s=>{
-      const h2=s.querySelector('h2');
-      const title=(h2?.textContent||'').replace(/^\d+\.\s*/,''); const id=h2?.id||'';
-      const lines=[...s.querySelectorAll('.line')].map(l=>({chords:l.querySelector('.chords')?.innerText||'', lyrics:l.querySelector('.lyrics')?.innerText||''}));
-      data.push({title,id,lines});
-    });
-    localStorage.setItem('songbook', JSON.stringify(data));
-    alert('✅ Zapisano lokalnie.');
-  });
-
-  // Export HTML (snapshot of current DOM)
-  expHBtn.addEventListener('click', () => {
-    const clone = document.documentElement.cloneNode(true);
-    // Remove transient classes
-    clone.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));
-    const serialized = '<!DOCTYPE html>\n' + clone.outerHTML;
-    const blob = new Blob([serialized], {type:'text/html;charset=utf-8'});
-    const a = document.createElement('a');
-    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-    a.download = 'Zaduszki_2025_export_' + ts + '.html';
-    a.href = URL.createObjectURL(blob);
-    document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
-  });
-
-  // Export PDF (print)
-  expPBtn.addEventListener('click', () => { window.print(); });
-
-  // Restore default (clear storage + hard reload, also nuke SW caches if present)
-  clearBtn.addEventListener('click', () => {
-    if (window.confirm('Przywrócić domyślną wersję śpiewnika? (usunięte zostaną lokalne zmiany)')) {
-      try { localStorage.removeItem('songbook'); } catch(e) {}
-      try { localStorage.removeItem('toc-order'); } catch(e) {}
-      try { sessionStorage.clear(); } catch(e) {}
-      const doReload = () => window.location.replace(window.location.href.split('#')[0]);
-      if ('caches' in window) {
-        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).finally(doReload);
-      } else {
-        doReload();
-      }
-    }
-  });
-});</script>
 
 </body>
 </html>
